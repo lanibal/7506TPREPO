@@ -1,0 +1,230 @@
+#include "IndexWrapper.h"
+#include "../common/Resource.h"
+
+using namespace std;
+
+void IndexWrapper::createIndex(string path, indexItem itemType, int keyTopSize) {
+
+	string indexPath = Utility::getApplicationPath() + Resource::getConfigProperties()->get("miBiografia.directorio.archivos.index");
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		this->author = new ClassifBPlusTree(indexPath + path, keyTopSize);
+		break;
+	case IndexWrapper::TITULO:
+		this->titulo = new ClassifBPlusTree(indexPath + path, keyTopSize);
+		break;
+	case IndexWrapper::PALABRAS:
+		this->words = new HashClasification(indexPath + path);
+		break;
+	case IndexWrapper::IDENTIFICADOR:
+		this->tittle = new HashSelection(indexPath + path);
+		break;
+	case IndexWrapper::FECHA:
+	this->fecha = new ClassifBPlusTree(indexPath + path,keyTopSize);
+	break;
+	default:
+		throw "Not an item handled";
+	}
+
+}
+
+void IndexWrapper::closeIndex(indexItem itemType) {
+
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		if(this->author != NULL)
+			delete this->author;
+		break;
+	case IndexWrapper::TITULO:
+		if(this->titulo != NULL)
+			delete this->titulo;
+		break;
+	case IndexWrapper::PALABRAS:
+		if(this->words != NULL)
+			delete this->words;
+		break;
+	case IndexWrapper::IDENTIFICADOR:
+		if(this->tittle != NULL)
+			delete this->tittle;
+		break;
+	case IndexWrapper::FECHA:
+		if (this->fecha != NULL)
+			delete this->fecha;
+		break;
+	default:
+		throw "Not an item handled";
+	}
+
+}
+
+bool IndexWrapper::add(Record* r, indexItem itemType) {
+
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		return this->author->add(r);
+	case IndexWrapper::TITULO:
+		return this->titulo->add(r);
+	case IndexWrapper::PALABRAS:
+		return this->words->insertRecord(r);
+	case IndexWrapper::IDENTIFICADOR:
+		return this->tittle->insertRecord(r);
+	case IndexWrapper::FECHA:
+		return this->fecha->add(r);
+		break;
+	default:
+		throw "Not an item handled";
+	}
+
+}
+
+bool IndexWrapper::remove(Record* r, indexItem itemType) {
+
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		return this->author->removeKey(*(r->getKey()), r->getData()->readAsInt(0));
+	case IndexWrapper::TITULO:
+		return this->titulo->removeKey(*(r->getKey()), r->getData()->readAsInt(0));
+	case IndexWrapper::PALABRAS:
+		return this->words->deleteRecord(r);
+	case IndexWrapper::IDENTIFICADOR:
+		return this->tittle->deleteRecord(r);
+	case IndexWrapper::FECHA:
+		return this->fecha->removeKey(*(r->getKey()), r->getData()->readAsInt(0));
+		break;
+
+	default:
+		throw "Not an item handled";
+	}
+}
+
+Record* IndexWrapper::search(Key* key, indexItem itemType) {
+
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		return this->author->search(*(key)).first;
+	case IndexWrapper::TITULO:
+		return this->titulo->search(*(key)).first;
+	case IndexWrapper::PALABRAS:
+		return this->words->findRecord(key);
+	case IndexWrapper::IDENTIFICADOR:
+		return this->tittle->findRecord(key);
+	case IndexWrapper::FECHA:
+			return this->fecha->search(*(key)).first;
+
+	default:
+		throw "Not an item handled";
+	}
+}
+
+list<int>* IndexWrapper::searchAllIds(Key* k, indexItem itemType){
+	switch (itemType) {
+		case IndexWrapper::AUTOR:
+			return this->author->searchAllIds(*k);
+		case IndexWrapper::TITULO:
+			return this->titulo->searchAllIds(*k);
+		case IndexWrapper::PALABRAS:
+			return this->words->searchRecord(k);
+		case IndexWrapper::IDENTIFICADOR:
+			return this->tittle->searchRecord(k);
+		case IndexWrapper::FECHA:
+					return this->fecha->searchAllIds(*k);
+		default:
+			throw "Not an item handled";
+		}
+}
+
+IndexWrapper::~IndexWrapper(){
+	if(this->author != NULL)
+		delete(this->author);
+	if(this->titulo != NULL)
+		delete(this->titulo);
+	if(this->tittle != NULL)
+		delete(this->tittle);
+	if(this->words != NULL)
+		delete(this->words);
+	if (this->fecha != NULL)
+		delete(this->fecha);
+
+}
+
+
+bool IndexWrapper::removeFromAll(Document b){
+	bool toReturn = true;
+	Record r;
+	int documentId = b.getId();
+	r.setData(new ByteString(&documentId, sizeof(int)));
+	// author
+	if (this->author != NULL) {
+		r.setKey(new Key(b.getAuthor()));
+		if(!this->remove(&r, IndexWrapper::AUTOR))
+			toReturn = false;
+	}
+	// titulo
+	if (this->titulo != NULL) {
+		r.setKey(new Key(b.gettitulo()));
+		if(!this->remove(&r, IndexWrapper::TITULO))
+			toReturn = false;
+	}
+	// title
+	if (this->tittle != NULL) {
+		r.setKey(new Key(b.getTitle()));
+		if(!this->remove(&r, IndexWrapper::IDENTIFICADOR))
+			toReturn = false;
+	}
+	// words
+	if (this->words != NULL) {
+		FileParser parser;
+		parser.setWords(b.getText());
+		set<string> words = parser.getWords();
+		for(set<string>::iterator it = words.begin(); it != words.end(); ++it){
+			r.setKey(new Key(*it));
+			if(!this->remove(&r, IndexWrapper::PALABRAS))
+				toReturn = false;
+		}
+
+	}
+	if (this->fecha != NULL) {
+			r.setKey(new Key(Utility::intToString(b.getWordCount())));
+			if(!this->remove(&r, IndexWrapper::FECHA))
+				toReturn = false;
+		}
+	return toReturn;
+}
+
+void IndexWrapper::exportIndex(string path, indexItem itemType){
+
+	string indexPath = Utility::getApplicationPath() + Resource::getConfigProperties()->get("miBiografia.directorio.archivos.export");
+	switch (itemType) {
+	case IndexWrapper::AUTOR:
+		this->author->exportToPlainText(indexPath+path,true,false); break;
+	case IndexWrapper::TITULO:
+		this->titulo->exportToPlainText(indexPath+path,true,false); break;
+	case IndexWrapper::PALABRAS:
+		this->words->printDataInFile(indexPath+path); break;
+	case IndexWrapper::IDENTIFICADOR:
+		this->tittle->printDataInFile(indexPath+path); break;
+	case IndexWrapper::FECHA:
+		this->fecha->exportToPlainText(indexPath + path,true,false);
+		break;
+	default:
+		throw "Not an item handled";
+	}
+}
+
+IndexWrapper* IndexWrapper::getInstanceOfIndexWrapper(){
+	if(!instance)
+		instance = new IndexWrapper();
+	return instance;
+}
+
+IndexWrapper* IndexWrapper::instance = NULL;
+
+IndexWrapper::IndexWrapper(){
+
+}
+
+
+void IndexWrapper::exportInvertedList(string path)
+{
+	this->words->exportInvertedList(path);
+}
