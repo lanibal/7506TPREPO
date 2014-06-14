@@ -210,7 +210,7 @@ void deleteFiles(string fileId)
 	delete key;
 }
 
-void deleteFilesFecha(string fileId)
+void deleteFilesFecha(string fecha)
 {
 	Mediator* mediator = new Mediator();
 	mediator->initializeIndex(IndexWrapper::AUTOR, "IndiceAutor", 50);
@@ -218,14 +218,115 @@ void deleteFilesFecha(string fileId)
 	mediator->initializeIndex(IndexWrapper::IDENTIFICADOR, "IndiceTitulo", 50);
 	mediator->initializeIndex(IndexWrapper::PALABRAS, "IndicePalabras", 50);
 	mediator->initializeIndex(IndexWrapper::FECHA, "IndiceFecha", 50);
-	int id = Utility::stringToInt(fileId);
-	bool deleted = mediator->removeDocument(id);
-	if(deleted)
-		cout<<"Se ha borrado el archivo Exitosamente"<<endl;
-	else
-		cout<<"No se ha podido borrar el archivo"<<endl;
+
+	Key* key = new Key(fecha);
+	list<int>* documentIds;
+	documentIds = mediator->getIndexWrapper()->searchAllIds(key, IndexWrapper::FECHA);
+	if(documentIds->size() > 0){
+		bool deleted = false;
+		for (list<int>::iterator it = documentIds->begin(); it != documentIds->end(); ++it)	{
+			int id = *it;
+			deleted = mediator->removeDocument(id);
+		}
+		if(deleted)
+			cout<<"Se han borrado los archivos Exitosamente"<<endl;
+
+		//else cout<<"No se han podido borrar los archivos"<<endl;
+	}
+
+	//else cout<<"No hay documentos con esa fecha"<<endl;
 
 	delete mediator;
+	delete key;
+}
+
+
+void deleteFilesMenorFecha(string fecha)
+{
+	Mediator* mediator = new Mediator();
+	mediator->initializeIndex(IndexWrapper::AUTOR, "IndiceAutor", 50);
+	mediator->initializeIndex(IndexWrapper::TITULO, "Indicetitulo", 50);
+	mediator->initializeIndex(IndexWrapper::IDENTIFICADOR, "IndiceTitulo", 50);
+	mediator->initializeIndex(IndexWrapper::PALABRAS, "IndicePalabras", 50);
+	mediator->initializeIndex(IndexWrapper::FECHA, "IndiceFecha", 50);
+
+	int fnum = Utility::stringToInt(fecha);
+	for (int i = 20140301; i < fnum; i++)	{
+		string fs = Utility::intToString(i);
+
+		Key* key = new Key(fs);
+		list<int>* documentIds;
+		documentIds = mediator->getIndexWrapper()->searchAllIds(key, IndexWrapper::FECHA);
+		if(documentIds->size() > 0){
+			bool deleted = false;
+			for (list<int>::iterator it = documentIds->begin(); it != documentIds->end(); ++it)	{
+				int id = *it;
+				deleted = mediator->removeDocument(id);
+			}
+			if(deleted)
+					cout<<"Se han borrado los archivos Exitosamente"<<endl;
+		}
+
+		delete key;
+	}
+
+	delete mediator;
+
+}
+
+
+void deleteFilesMayorFecha(string fecha)
+{
+	Mediator* mediator = new Mediator();
+	mediator->initializeIndex(IndexWrapper::AUTOR, "IndiceAutor", 50);
+	mediator->initializeIndex(IndexWrapper::TITULO, "Indicetitulo", 50);
+	mediator->initializeIndex(IndexWrapper::IDENTIFICADOR, "IndiceTitulo", 50);
+	mediator->initializeIndex(IndexWrapper::PALABRAS, "IndicePalabras", 50);
+	mediator->initializeIndex(IndexWrapper::FECHA, "IndiceFecha", 50);
+
+	int fnum = Utility::stringToInt(fecha);
+	for (int i = fnum+1; i < 20140731; i++)	{
+		string fs = Utility::intToString(i);
+
+		Key* key = new Key(fs);
+		list<int>* documentIds;
+		documentIds = mediator->getIndexWrapper()->searchAllIds(key, IndexWrapper::FECHA);
+		if(documentIds->size() > 0){
+			bool deleted = false;
+			for (list<int>::iterator it = documentIds->begin(); it != documentIds->end(); ++it)	{
+				int id = *it;
+				deleted = mediator->removeDocument(id);
+			}
+			if(deleted)
+					cout<<"Se han borrado los archivos Exitosamente"<<endl;
+		}
+
+		delete key;
+	}
+
+	delete mediator;
+
+}
+
+
+void deleteAll()
+{
+	Mediator* mediator = new Mediator();
+	mediator->initializeIndex(IndexWrapper::AUTOR, "IndiceAutor", 50);
+	mediator->initializeIndex(IndexWrapper::TITULO, "Indicetitulo", 50);
+	mediator->initializeIndex(IndexWrapper::IDENTIFICADOR, "IndiceTitulo", 50);
+	mediator->initializeIndex(IndexWrapper::PALABRAS, "IndicePalabras", 50);
+	mediator->initializeIndex(IndexWrapper::FECHA, "IndiceFecha", 50);
+
+	bool deleted = false;
+	for (int i = 1; i < 1000; i++)	{
+		int id = i;
+		deleted = mediator->removeDocument(id);
+		if(deleted)
+			cout<<"Se ha borrado el archivo Exitosamente"<<endl;
+	}
+		delete mediator;
+
 }
 
 
@@ -325,12 +426,24 @@ int main(int argc, char** argv)
 					deleteFiles(commandParser->getFileId());
 					break;
 				case QuitarArchivoPorFecha:
-				//	deleteFilesfecha();
+					deleteFilesFecha(commandParser->getFileId());
 					break;
+
+				case EliminarMenorFecha:
+					deleteFilesMenorFecha(commandParser->getFileId());
+					break;
+
+				case EliminarMayorFecha:
+					deleteFilesMayorFecha(commandParser->getFileId());
+					break;
+
+				case EliminarTodo:
+					deleteAll();
+					break;
+
 				case VerEstructuraIndices:
 					seeStructure(commandParser->getIndexId(), commandParser->getPathFile());
 					break;
-
 				case VerEstructuraArchivos:
 					cout << "Opcion: Ver Estructura Archivos" << endl;
 					cout << "Archivo Salida: '" << commandParser->getPathFile() << "'" << endl;
